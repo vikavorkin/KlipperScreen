@@ -229,7 +229,7 @@ class KlippyGtk:
                 dialog.add_button(button['name'], button['response'])
                 button = dialog.get_widget_for_response(button['response'])
                 button.connect("pressed", self.screen._button_pressed_feedback)
-            button.set_size_request(button_hsize, self.dialog_buttons_height)
+                button.set_size_request(button_hsize, self.dialog_buttons_height)
                 button.get_style_context().add_class(style)
                 format_label(button, 2)
         else:
