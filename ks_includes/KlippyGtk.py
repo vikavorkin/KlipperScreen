@@ -286,17 +286,6 @@ class KlippyGtk:
         b.connect("pressed", self.screen._button_pressed_feedback)
         return b
 
-    @staticmethod
-    def ScrolledWindow():
-        scroll = Gtk.ScrolledWindow()
-        scroll.set_property("overlay-scrolling", False)
-        scroll.set_vexpand(True)
-        scroll.add_events(Gdk.EventMask.BUTTON_PRESS_MASK |
-                          Gdk.EventMask.TOUCH_MASK |
-                          Gdk.EventMask.BUTTON_RELEASE_MASK)
-        scroll.set_kinetic_scrolling(True)
-        return scroll
-
     def set_cursor(self, show: bool, window: Gdk.Window):
         if show:
             window.set_cursor(
