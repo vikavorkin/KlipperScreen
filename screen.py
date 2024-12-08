@@ -406,6 +406,7 @@ class KlipperScreen(Gtk.Window):
                 widget.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
                 widget.set_max_width_chars(40)
         msg.connect("clicked", self.close_popup_message)
+        msg.connect("pressed", self._button_pressed_feedback)
         msg.get_style_context().add_class("message_popup")
         if level == 1:
             msg.get_style_context().add_class("message_popup_echo")
@@ -566,6 +567,10 @@ class KlipperScreen(Gtk.Window):
         self.panels_reinit = list(self.panels)
         self.base_panel.reload_icons()
 
+    def _button_pressed_feedback(self, widget=None):
+        os.system('/boot/scripts/ks_click.sh')
+        os.system('/etc/scripts/ks_click.sh')
+
     def _go_to_submenu(self, widget, name):
         logging.info(f"#### Go to submenu {name}")
         # Find current menu item
@@ -610,6 +615,61 @@ class KlipperScreen(Gtk.Window):
             if not home:
                 break
         self.attach_panel(self._cur_panels[-1])
+
+    def add_subscription(self, panel_name):
+        if panel_name not in self.subscriptions:
+            self.subscriptions.append(panel_name)
+
+    def reset_screensaver_timeout(self, *args):
+        if not self.use_dpms and self.screensaver_timeout is not None:
+            GLib.source_remove(self.screensaver_timeout)
+            self.screensaver_timeout = GLib.timeout_add_seconds(self.blanking_time, self.show_screensaver)
+
+    def show_screensaver(self):
+        logging.debug("Showing Screensaver")
+        if self.screensaver is not None:
+            self.close_screensaver()
+        self.remove_keyboard()
+        for dialog in self.dialogs:
+            logging.debug("Hiding dialog")
+            dialog.hide()
+
+        close = Gtk.Button()
+        close.connect("clicked", self.close_screensaver)
+        close.connect("pressed", self._button_pressed_feedback)
+
+        box = Gtk.Box()
+        box.set_size_request(self.width, self.height)
+        box.pack_start(close, True, True, 0)
+        box.set_halign(Gtk.Align.CENTER)
+        box.get_style_context().add_class("screensaver")
+        self.remove(self.base_panel.main_grid)
+        self.add(box)
+
+        # Avoid leaving a cursor-handle
+        close.grab_focus()
+        self.screensaver = box
+        self.screensaver.show_all()
+        self.power_devices(None, self._config.get_main_config().get("screen_off_devices", ""), on=False)
+        return False
+
+    def close_screensaver(self, widget=None):
+        if self.screensaver is None:
+            return False
+        logging.debug("Closing Screensaver")
+        self.remove(self.screensaver)
+        self.screensaver = None
+        self.add(self.base_panel.main_grid)
+        if self.use_dpms:
+            self.wake_screen()
+        else:
+            self.screensaver_timeout = GLib.timeout_add_seconds(self.blanking_time, self.show_screensaver)
+        for dialog in self.dialogs:
+            logging.info(f"Restoring Dialog {dialog}")
+            dialog.show()
+        self.show_all()
+        self.power_devices(None, self._config.get_main_config().get("screen_on_devices", ""), on=True)
+        return False
 
     def check_dpms_state(self):
         if not self.use_dpms:

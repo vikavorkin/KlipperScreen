@@ -181,6 +181,7 @@ class KlippyGtk:
         if style is not None:
             b.get_style_context().add_class(style)
         b.connect("clicked", self.screen.screensaver.reset_timeout)
+        b.connect("pressed", self.screen._button_pressed_feedback)
         return b
 
     @staticmethod
@@ -227,7 +228,8 @@ class KlippyGtk:
                 style = button['style'] if 'style' in button else 'dialog-default'
                 dialog.add_button(button['name'], button['response'])
                 button = dialog.get_widget_for_response(button['response'])
-                button.set_size_request(button_hsize, self.dialog_buttons_height)
+                button.connect("pressed", self.screen._button_pressed_feedback)
+            button.set_size_request(button_hsize, self.dialog_buttons_height)
                 button.get_style_context().add_class(style)
                 format_label(button, 2)
         else:
@@ -274,6 +276,26 @@ class KlippyGtk:
     def ScrolledWindow(self, steppers=True, **kwargs):
         steppers = steppers and self.screen._config.get_main_config().getboolean("show_scroll_steppers", fallback=False)
         return CustomScrolledWindow(steppers, **kwargs)
+
+    def ToggleButton(self, text):
+        b = Gtk.ToggleButton(text)
+        b.props.relief = Gtk.ReliefStyle.NONE
+        b.set_hexpand(True)
+        b.set_vexpand(True)
+        b.connect("clicked", self.screen.reset_screensaver_timeout)
+        b.connect("pressed", self.screen._button_pressed_feedback)
+        return b
+
+    @staticmethod
+    def ScrolledWindow():
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_property("overlay-scrolling", False)
+        scroll.set_vexpand(True)
+        scroll.add_events(Gdk.EventMask.BUTTON_PRESS_MASK |
+                          Gdk.EventMask.TOUCH_MASK |
+                          Gdk.EventMask.BUTTON_RELEASE_MASK)
+        scroll.set_kinetic_scrolling(True)
+        return scroll
 
     def set_cursor(self, show: bool, window: Gdk.Window):
         if show:
